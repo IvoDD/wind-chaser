@@ -1,19 +1,19 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+// Use relative URLs in development (proxied) or absolute URLs from environment variable
+const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true,
 });
 
 // Request interceptor for adding auth token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -29,9 +29,11 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Handle unauthorized access
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+      // Handle unauthorized access - clear tokens and let AuthContext handle the redirect
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('refreshToken');
+      // Don't force redirect here, let the AuthContext handle state changes
+      window.dispatchEvent(new Event('auth-logout'));
     }
     return Promise.reject(error);
   }

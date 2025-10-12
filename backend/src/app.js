@@ -10,6 +10,7 @@ const connectDB = require('./utils/database');
 
 // Import routes
 const authRoutes = require('./routes/auth');
+const spotsRoutes = require('./routes/spots');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -17,18 +18,18 @@ const PORT = process.env.PORT || 5000;
 // Security middleware
 app.use(helmet());
 
-// Rate limiting
+// Rate limiting - more lenient for development
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // 1000 requests for development
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 app.use(limiter);
 
 // CORS configuration
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true
-}));
+app.use(cors());
 
 // Logging
 app.use(morgan('combined'));
@@ -68,13 +69,15 @@ app.get('/api/test', (req, res) => {
     endpoints: {
       health: '/api/health',
       test: '/api/test',
-      auth: '/api/auth/*'
+      auth: '/api/auth/*',
+      spots: '/api/spots/*'
     }
   });
 });
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/spots', spotsRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

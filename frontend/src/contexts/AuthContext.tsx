@@ -134,6 +134,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  // Listen for logout events from API interceptor
+  useEffect(() => {
+    const handleAuthLogout = () => {
+      dispatch({ type: 'AUTH_LOGOUT' });
+    };
+
+    window.addEventListener('auth-logout', handleAuthLogout);
+    return () => window.removeEventListener('auth-logout', handleAuthLogout);
+  }, []);
+
   const login = async (email: string, password: string): Promise<void> => {
     dispatch({ type: 'AUTH_START' });
     
