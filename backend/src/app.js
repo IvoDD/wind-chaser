@@ -11,6 +11,7 @@ const connectDB = require('./utils/database');
 // Import routes
 const authRoutes = require('./routes/auth');
 const spotsRoutes = require('./routes/spots');
+const forecastsRoutes = require('./routes/forecasts');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -78,6 +79,7 @@ app.get('/api/test', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/spots', spotsRoutes);
+app.use('/api/forecasts', forecastsRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

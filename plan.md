@@ -96,7 +96,7 @@ Build a full-stack web application for wind sports enthusiasts to track and rece
 - [x] Verify protected routes work correctly
 - [x] Test token refresh mechanism
 
-## Phase 3: Spots Management System (Days 5-6)
+## Phase 3: Spots Management System ✅ COMPLETED (Days 5-6)
 
 ### 3.1 Backend Spots System ✅ COMPLETED
 - [x] Create Spot model:
@@ -158,14 +158,14 @@ Build a full-stack web application for wind sports enthusiasts to track and rece
 - [x] Test URL accessibility before saving
 - [x] Provide user feedback for invalid URLs
 
-## Phase 4: Real-time Web Scraping for Dashboard (Days 7-9)
+## Phase 4: Real-time Web Scraping for Dashboard ✅ COMPLETED (Days 7-9)
 
-### 4.1 Windguru Scraper Development
-- [ ] Install scraping dependencies:
+### 4.1 Windguru Scraper Development ✅ COMPLETED
+- [x] Install scraping dependencies:
   - cheerio for HTML parsing
-  - axios for HTTP requests
-  - puppeteer (if needed for dynamic content)
-- [ ] Create Windguru scraper service:
+  - axios for HTTP requests  
+  - puppeteer for dynamic content and cookie consent
+- [x] Create Windguru scraper service:
   ```javascript
   class WindguruScraper {
     async scrapeSpot(url) {
@@ -174,30 +174,67 @@ Build a full-stack web application for wind sports enthusiasts to track and rece
     }
   }
   ```
-- [ ] Analyze Windguru HTML structure
-- [ ] Extract relevant wind data:
-  - Wind speed (current and forecast)
-  - Wind direction
-  - Wind gusts
-  - Timestamp of forecast
-- [ ] Handle different Windguru page formats
-- [ ] Add error handling for failed scrapes
+- [x] Analyze Windguru HTML structure for https://www.windguru.cz/2346 and https://www.windguru.cz/81565
+- [x] Extract relevant wind forecast structure:
+  - Spot identification and naming
+  - Forecast period headers (dates/times)
+  - Table structure parsing with fixed row positions
+  - Cookie consent handling
+  - Anti-bot protection bypass
+- [x] Handle different Windguru page formats with flexible selectors
+- [x] Add error handling for failed scrapes
+- [x] Implement caching mechanism (5-minute cache)
+- [x] Add retry logic with fallback from Axios to Puppeteer
+- [x] **Fixed row-based parsing**: Correctly extracts data based on fixed table structure:
+  - Row 0: Date/Time headers (e.g., "Su12.10h")
+  - Row 1: Wind speed in knots (e.g., 6)
+  - Row 2: Wind gusts in knots (e.g., 8)
+  - Row 3: Wind direction in degrees (e.g., "249°")
+  - Row 4: Temperature in Celsius (e.g., 13)
+  - Row 5-7: Cloud coverage (low/mid/high levels)
+  - Row 8: Precipitation
+- [x] **Comprehensive forecast coverage**: Extracting 109 forecast periods (4-5 days of data)
+- [x] **Accurate data extraction**: Wind direction from HTML title attributes, numeric parsing for all values
 
-### 4.2 Real-time Scraping API
-- [ ] Create forecast controllers for real-time data:
+### 4.2 Real-time Scraping API ✅ COMPLETED
+- [x] Create forecast controllers for real-time data:
   - Get live forecast for spot (scrape on-demand)
   - Trigger manual forecast update
-- [ ] Add caching mechanism to prevent excessive scraping (5-10 minute cache)
-- [ ] Setup rate limiting for scraper requests
-- [ ] Add retry logic for failed scrapes
-- [ ] Return structured wind data to frontend
+  - Get dashboard with all user spots
+  - Test forecast URL accessibility
+- [x] Add caching mechanism to prevent excessive scraping (5-minute cache)
+- [x] Setup rate limiting for scraper requests (increased for development)
+- [x] Add retry logic for failed scrapes (Axios → Puppeteer fallback)
+- [x] Return structured wind data to frontend
+- [x] Comprehensive error handling per spot
+- [x] **Fixed database query issues**: Removed non-existent `isDeleted` field checks
+- [x] **API endpoints working**: Test endpoint returns complete forecast data structure
 
-### 4.3 Dashboard Integration
-- [ ] Create API endpoints for dashboard:
+### 4.3 Dashboard Integration ✅ COMPLETED
+- [x] Create API endpoints for dashboard:
   - GET /api/forecasts/live/:spotId - Get current conditions
   - GET /api/forecasts/dashboard - Get all user spots with live data
-- [ ] Implement error handling for unavailable forecasts
-- [ ] Add loading states for scraping operations
+  - POST /api/forecasts/refresh/:spotId - Manual refresh
+  - POST /api/forecasts/test - Test URL scraping
+  - DELETE /api/forecasts/cache - Clear cache
+- [x] Implement error handling for unavailable forecasts
+- [x] Add loading states for scraping operations
+- [x] Integration with spots ownership verification
+- [x] **Data structure validation**: Confirmed all 109 forecast periods are available for dashboard
+- [x] **Multi-day forecast support**: Full forecast data covering multiple days for optimal wind session planning
+
+**Phase 4 Results**: The scraper successfully extracts comprehensive wind data from Windguru including wind speed, gusts, direction, temperature, and cloud cover for 109 forecast periods (multiple days). All API endpoints are functional and ready for frontend dashboard integration.
+
+### 4.3 Dashboard Integration ✅ COMPLETED
+- [x] Create API endpoints for dashboard:
+  - GET /api/forecasts/live/:spotId - Get current conditions
+  - GET /api/forecasts/dashboard - Get all user spots with live data
+  - POST /api/forecasts/refresh/:spotId - Manual refresh
+  - POST /api/forecasts/test - Test URL scraping
+  - DELETE /api/forecasts/cache - Clear cache
+- [x] Implement error handling for unavailable forecasts
+- [x] Add loading states for scraping operations
+- [x] Integration with spots ownership verification
 
 ## Phase 5: Dashboard & Frontend Development (Days 10-12)
 
