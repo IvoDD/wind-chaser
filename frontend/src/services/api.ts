@@ -44,10 +44,13 @@ export const apiService = {
   // Test endpoint
   test: () => api.get('/test'),
   
-  // Auth endpoints (to be implemented in phase 2)
+  // Auth endpoints
   login: (credentials: any) => api.post('/auth/login', credentials),
   register: (userData: any) => api.post('/auth/register', userData),
-  logout: () => api.post('/auth/logout'),
+  logout: (data: any) => api.post('/auth/logout', data),
+  getProfile: () => api.get('/auth/profile'),
+  updateProfile: (userData: any) => api.put('/auth/profile', userData),
+  refreshToken: (data: any) => api.post('/auth/refresh', data),
   
   // Spots endpoints (to be implemented in phase 3)
   getSpots: () => api.get('/spots'),

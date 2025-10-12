@@ -8,6 +8,9 @@ require('dotenv').config();
 
 const connectDB = require('./utils/database');
 
+// Import routes
+const authRoutes = require('./routes/auth');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -61,9 +64,17 @@ app.get('/api/health', (req, res) => {
 app.get('/api/test', (req, res) => {
   res.status(200).json({
     message: 'Backend API is working!',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: '/api/health',
+      test: '/api/test',
+      auth: '/api/auth/*'
+    }
   });
 });
+
+// API Routes
+app.use('/api/auth', authRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

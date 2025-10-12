@@ -1,7 +1,10 @@
 import React from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import ApiTestComponent from './components/ApiTestComponent';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import AuthPage from './components/auth/AuthPage';
+import Dashboard from './components/Dashboard';
+import { CircularProgress, Box } from '@mui/material';
 import './App.css';
 
 const theme = createTheme({
@@ -15,13 +18,35 @@ const theme = createTheme({
   },
 });
 
+// Main app content component (inside AuthProvider)
+const AppContent: React.FC = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <Box 
+        display="flex" 
+        justifyContent="center" 
+        alignItems="center" 
+        minHeight="100vh"
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  return isAuthenticated ? <Dashboard /> : <AuthPage />;
+};
+
 function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <div className="App">
-        <ApiTestComponent />
-      </div>
+      <AuthProvider>
+        <div className="App">
+          <AppContent />
+        </div>
+      </AuthProvider>
     </ThemeProvider>
   );
 }
