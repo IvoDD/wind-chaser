@@ -12,7 +12,7 @@ const scraper = new WindguruScraper();
 const getLiveForecast = async (req, res) => {
   try {
     const { spotId } = req.params;
-    const userId = req.user.userId;
+    const userId = req.user._id || req.user.id;
 
     // Find the spot and verify ownership
     const spot = await Spot.findOne({ 
@@ -83,13 +83,20 @@ const getLiveForecast = async (req, res) => {
  */
 const getDashboardForecasts = async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user._id || req.user.id; // Use _id (MongoDB ObjectId) or id
+    console.log('Dashboard request for userId:', userId);
+    console.log('req.user:', req.user);
 
     // Get all active user spots
     const spots = await Spot.find({ 
       userId: userId,
       isActive: true
     }).sort({ createdAt: -1 });
+
+    console.log('Found spots:', spots.length);
+    if (spots.length > 0) {
+      console.log('First spot:', { id: spots[0]._id, name: spots[0].name, url: spots[0].windguruUrl });
+    }
 
     if (spots.length === 0) {
       return res.json({
@@ -171,13 +178,12 @@ const getDashboardForecasts = async (req, res) => {
 const refreshSpotForecast = async (req, res) => {
   try {
     const { spotId } = req.params;
-    const userId = req.user.userId;
+    const userId = req.user._id || req.user.id;
 
     // Find the spot and verify ownership
     const spot = await Spot.findOne({ 
       _id: spotId, 
-      userId: userId,
-      isDeleted: { $ne: true }
+      userId: userId
     });
 
     if (!spot) {
@@ -270,8 +276,7 @@ const clearForecastCache = async (req, res) => {
       // Clear cache for specific spot
       const spot = await Spot.findOne({ 
         _id: spotId, 
-        userId: req.user.userId,
-        isDeleted: { $ne: true }
+        userId: req.user._id || req.user.id
       });
 
       if (!spot) {

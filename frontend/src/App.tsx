@@ -4,7 +4,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SpotsProvider } from './contexts/SpotsContext';
 import AuthPage from './components/auth/AuthPage';
-import Dashboard from './components/Dashboard';
+import ForecastDashboard from './components/ForecastDashboard';
 import SpotsManagement from './components/SpotsManagement';
 import { CircularProgress, Box, AppBar, Toolbar, Typography, Button } from '@mui/material';
 import './App.css';
@@ -80,7 +80,11 @@ const AppContent: React.FC = () => {
   return (
     <SpotsProvider>
       <Navigation currentView={currentView} onViewChange={setCurrentView} />
-      {currentView === 'dashboard' && <Dashboard />}
+      {currentView === 'dashboard' && (
+        <ForecastDashboard 
+          onNavigateToSpots={() => setCurrentView('spots')} 
+        />
+      )}
       {currentView === 'spots' && <SpotsManagement />}
     </SpotsProvider>
   );

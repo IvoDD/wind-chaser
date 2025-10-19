@@ -236,33 +236,93 @@ Build a full-stack web application for wind sports enthusiasts to track and rece
 - [x] Add loading states for scraping operations
 - [x] Integration with spots ownership verification
 
-## Phase 5: Dashboard & Frontend Development (Days 10-12)
+## Phase 5: Dashboard & Frontend Development ⚠️ IN PROGRESS (Days 10-12)
 
-### 5.1 Main Dashboard
-- [ ] Create dashboard layout component
-- [ ] Build spot cards with live wind data
-- [ ] Add loading states and error handling
-- [ ] Implement real-time data refresh
-- [ ] Create wind condition visualization
+### 5.1 Main Dashboard ⚠️ IN PROGRESS
+- [x] Create dashboard layout component (ForecastDashboard.tsx)
+- [x] Build forecast table component with Windguru-style layout:
+  - Horizontal scrolling forecast table
+  - Time/date headers row
+  - Wind speed, gusts, direction rows
+  - Temperature and precipitation rows
+  - Responsive design with fixed row headers
+- [x] Add loading states and error handling components
+- [x] Create spot card structure for displaying multiple spots
+- [x] Implement Material-UI Grid layout for dashboard
+- [x] Fix TypeScript compilation issues with MUI Grid components
+- [ ] **DEBUG NEEDED**: Investigate why /api/forecasts/dashboard returns empty spots array
+  - Spots exist in database (verified via /api/spots)
+  - Dashboard controller may be failing during forecast scraping
+  - Need to check error handling in Promise.allSettled for forecast fetching
+  - Verify database query in getDashboardForecasts function
+- [ ] Integrate real-time data refresh from API
 - [ ] Add manual refresh button for each spot
+- [ ] Test forecast data display with live Windguru data
 
 ### 5.2 Enhanced UI/UX
-- [ ] Add responsive design for mobile devices
+- [x] Add responsive design framework with Material-UI
 - [ ] Implement dark/light theme toggle
-- [ ] Add loading animations and transitions
+- [x] Add loading animations structure (skeleton components ready)
 - [ ] Create error handling toast system
 - [ ] Add help tooltips and user guides
 
 ### 5.3 Dashboard Features
-- [ ] Wind data display (speed, direction, gusts)
+- [x] Forecast table structure (speed, direction, gusts, temperature)
 - [ ] Spot grouping and filtering
 - [ ] Quick actions (edit spot, delete spot)
 - [ ] Direct links to original Windguru pages
 - [ ] Last updated timestamps
+- [ ] Horizontal scrolling for extended forecast periods
+
+**Phase 5 Progress**: Frontend dashboard components created with Windguru-style forecast tables. Main blocker: dashboard API returning empty spots despite spots existing in database. Need to debug forecast scraping integration.
+
+## Phase 5 Debugging Steps for Next Session
+
+### Dashboard API Issue Investigation
+1. **Check Authentication Token**: Get fresh token via /api/auth/login
+2. **Test Individual Endpoints**:
+   - Verify /api/spots returns user spots (✅ confirmed working)
+   - Test /api/forecasts/dashboard with debug logging
+3. **Backend Controller Debugging**:
+   - Add console.log to getDashboardForecasts function
+   - Check if spots query returns results before scraping
+   - Verify Promise.allSettled error handling
+   - Check if scraping failures cause empty response
+4. **Database Query Issues**:
+   - Verify userId matching in dashboard controller
+   - Check isActive field filtering
+   - Ensure database connection is stable
+5. **Scraping Integration**:
+   - Test individual spot scraping via /api/forecasts/test
+   - Check if bulk scraping times out or fails
+   - Verify error handling doesn't drop successful spots
+
+### Next Steps After Debugging
+1. Fix dashboard API to return spots with forecast data
+2. Integrate real forecast data into ForecastTable component
+3. Test horizontal scrolling with 109 forecast periods
+4. Add loading states and error handling for failed scrapes
+5. Implement refresh functionality for individual spots
 
 ## Phase 6: Periodic Scraping & Historical Data (Days 13-15)
 
-### 6.1 Forecast Data Model & Storage
+### 6.1 Data Standardization & Backend Improvements
+- [ ] **Standardize cloud coverage data format**: Modify WindguruScraper to calculate and return average cloud coverage percentage (0-100%) instead of raw level data, ensuring uniform interface for future forecast sources (windyweek, etc.)
+- [ ] **Backend data normalization**: Ensure all forecast sources return consistent data structure:
+  ```javascript
+  {
+    windSpeed: Number,     // knots
+    windGusts: Number,     // knots  
+    windDirection: String, // degrees (e.g., "249°")
+    temperature: Number,   // celsius
+    cloudCover: Number,    // percentage 0-100
+    precipitation: Number  // mm or probability
+  }
+  ```
+- [ ] Add validation for normalized forecast data
+- [ ] Update existing forecast parsing to use standardized format
+
+### 6.2 Forecast Data Model & Storage
 - [ ] Create Forecast model for historical data:
   ```javascript
   {
