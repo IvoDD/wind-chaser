@@ -10,7 +10,12 @@ import {
   Chip,
   IconButton,
   Tooltip,
-  Link
+  Link,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle
 } from '@mui/material';
 import {
   Refresh as RefreshIcon,
@@ -21,6 +26,8 @@ import {
 } from '@mui/icons-material';
 import api from '../services/api';
 import ForecastTable from './ForecastTable';
+import { useSpots } from '../contexts/SpotsContext';
+import EditSpotDialog from './EditSpotDialog';
 
 interface WindForecast {
   datetime: string;
@@ -60,6 +67,13 @@ const ForecastDashboard: React.FC<{ onNavigateToSpots?: () => void }> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshingSpots, setRefreshingSpots] = useState<Set<string>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [spotToDelete, setSpotToDelete] = useState<SpotForecast | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [spotToEdit, setSpotToEdit] = useState<SpotForecast | null>(null);
+  const [deletingSpot, setDeletingSpot] = useState(false);
+
+  const { deleteSpot, updateSpot, fetchSpots } = useSpots();
 
   useEffect(() => {
     fetchDashboardData();
@@ -113,7 +127,43 @@ const ForecastDashboard: React.FC<{ onNavigateToSpots?: () => void }> = ({
     }
   };
 
-  const getWindConditionColor = (windSpeed: number | null): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
+  const handleEditSpot = (spot: SpotForecast) => {
+    setSpotToEdit(spot);
+    setEditDialogOpen(true);
+  };
+
+  const handleDeleteSpot = (spot: SpotForecast) => {
+    setSpotToDelete(spot);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteSpot = async () => {
+    if (!spotToDelete) return;
+
+    try {
+      setDeletingSpot(true);
+      await deleteSpot(spotToDelete.id);
+      
+      // Remove the spot from the dashboard list
+      setSpots(prevSpots => prevSpots.filter(spot => spot.id !== spotToDelete.id));
+      
+      setDeleteDialogOpen(false);
+      setSpotToDelete(null);
+    } catch (error: any) {
+      console.error('Error deleting spot:', error);
+      // Could add a toast notification here for error feedback
+    } finally {
+      setDeletingSpot(false);
+    }
+  };
+
+  const handleEditSpotSuccess = async () => {
+    setEditDialogOpen(false);
+    setSpotToEdit(null);
+    
+    // Refresh the dashboard data to get updated spot information
+    await fetchDashboardData();
+  };  const getWindConditionColor = (windSpeed: number | null): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
     if (!windSpeed) return 'default';
     if (windSpeed < 10) return 'info';
     if (windSpeed < 20) return 'success';
@@ -183,9 +233,16 @@ const ForecastDashboard: React.FC<{ onNavigateToSpots?: () => void }> = ({
   return (
     <Box sx={{ p: 3 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" component="h1">
-          Wind Forecast Dashboard
-        </Typography>
+        <Box>
+          <Typography variant="h4" component="h1">
+            Wind Forecast Dashboard
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            {spots.length} wind spot{spots.length !== 1 ? 's' : ''} • 
+            {spots.filter(s => s.isActive).length} active • 
+            {spots.filter(s => s.status === 'success').length} with forecasts
+          </Typography>
+        </Box>
         <Box>
           <Button
             variant="outlined"
@@ -266,10 +323,19 @@ const ForecastDashboard: React.FC<{ onNavigateToSpots?: () => void }> = ({
                     </Tooltip>
                     <Tooltip title="Edit spot">
                       <IconButton
-                        onClick={onNavigateToSpots}
+                        onClick={() => handleEditSpot(spot)}
                         size="small"
                       >
                         <EditIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete spot">
+                      <IconButton
+                        onClick={() => handleDeleteSpot(spot)}
+                        size="small"
+                        color="error"
+                      >
+                        <DeleteIcon />
                       </IconButton>
                     </Tooltip>
                   </Box>
@@ -335,6 +401,61 @@ const ForecastDashboard: React.FC<{ onNavigateToSpots?: () => void }> = ({
           </Box>
         ))}
       </Box>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+      >
+        <DialogTitle id="delete-dialog-title">
+          Delete Wind Spot
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="delete-dialog-description">
+            Are you sure you want to delete "{spotToDelete?.name}"? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setDeleteDialogOpen(false)}
+            disabled={deletingSpot}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={confirmDeleteSpot}
+            color="error"
+            variant="contained"
+            disabled={deletingSpot}
+            startIcon={deletingSpot ? <CircularProgress size={20} /> : <DeleteIcon />}
+          >
+            {deletingSpot ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Spot Dialog */}
+      {spotToEdit && (
+        <EditSpotDialog
+          open={editDialogOpen}
+          onClose={handleEditSpotSuccess}
+          spot={{
+            _id: spotToEdit.id,
+            userId: '', // This will be handled by the backend
+            name: spotToEdit.name,
+            location: spotToEdit.location,
+            windguruUrl: spotToEdit.windguruUrl,
+            description: '',
+            notificationCriteria: spotToEdit.notificationCriteria,
+            isActive: spotToEdit.isActive,
+            lastChecked: spotToEdit.lastChecked,
+            createdAt: '',
+            updatedAt: ''
+          }}
+        />
+      )}
     </Box>
   );
 };

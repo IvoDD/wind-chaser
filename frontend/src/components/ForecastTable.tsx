@@ -7,7 +7,6 @@ import {
   TableHead,
   TableRow,
   Typography,
-  Paper,
   styled,
   useTheme
 } from '@mui/material';
@@ -37,31 +36,75 @@ interface ForecastTableProps {
 
 // Styled components for Windguru-like appearance
 const StyledTable = styled(Table)(({ theme }) => ({
-  minWidth: 650,
+  minWidth: 'max-content', // Ensures table expands to fit all columns
+  tableLayout: 'fixed',
   '& .MuiTableCell-root': {
-    padding: '4px 8px',
+    minWidth: '100px', // Increased from 90px to match time cells
+    maxWidth: '100px',
+    padding: '6px 8px', // Increased padding
     textAlign: 'center',
+    fontSize: '0.8rem', // Slightly larger font
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    borderRight: `1px solid ${theme.palette.divider}`,
+    '&:last-child': {
+      borderRight: 'none',
+    }
+  },
+  '& .MuiTableHead-root .MuiTableCell-root': {
+    fontWeight: 'bold',
+    position: 'sticky',
+    top: 0,
+    zIndex: 1,
+    height: '48px', // Fixed height for header cells
+    padding: '8px 4px', // Better padding for headers
     fontSize: '0.75rem',
-    border: `1px solid ${theme.palette.divider}`,
-    minWidth: '60px',
-    whiteSpace: 'nowrap'
+    lineHeight: '1.2',
   }
 }));
 
 const StyledTableContainer = styled(Box)(({ theme }) => ({
   overflowX: 'auto',
+  overflowY: 'hidden',
   border: `1px solid ${theme.palette.divider}`,
   borderRadius: theme.shape.borderRadius,
   backgroundColor: theme.palette.background.paper,
+  scrollBehavior: 'smooth',
+  position: 'relative',
+  // Enhanced scrollbar styling for better visibility
   '&::-webkit-scrollbar': {
-    height: '8px',
+    height: '12px',
   },
   '&::-webkit-scrollbar-track': {
-    backgroundColor: theme.palette.grey[100],
+    backgroundColor: theme.palette.grey[200],
+    borderRadius: '6px',
+    margin: '0 4px',
   },
   '&::-webkit-scrollbar-thumb': {
-    backgroundColor: theme.palette.grey[400],
-    borderRadius: '4px',
+    backgroundColor: theme.palette.primary.main,
+    borderRadius: '6px',
+    border: `2px solid ${theme.palette.grey[200]}`,
+    '&:hover': {
+      backgroundColor: theme.palette.primary.dark,
+    }
+  },
+  // For Firefox
+  scrollbarWidth: 'thin',
+  scrollbarColor: `${theme.palette.primary.main} ${theme.palette.grey[200]}`,
+  // Add padding to ensure scrollbar doesn't overlap content
+  paddingBottom: '4px',
+  // Add scroll shadows for visual feedback
+  '&:after': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: '20px',
+    background: `linear-gradient(to right, transparent, ${theme.palette.background.paper}80)`,
+    pointerEvents: 'none',
+    opacity: 0.7,
   }
 }));
 
@@ -71,8 +114,14 @@ const TimeCell = styled(TableCell)(({ theme }) => ({
   fontWeight: 'bold',
   position: 'sticky',
   left: 0,
-  zIndex: 1,
-  minWidth: '80px !important'
+  zIndex: 2, // Higher z-index for header cell
+  minWidth: '120px !important', // Increased from 100px to 120px
+  maxWidth: '120px !important',
+  borderRight: `1px solid ${theme.palette.primary.dark}`,
+  padding: '8px 4px',
+  fontSize: '0.75rem',
+  lineHeight: '1.2',
+  height: '48px',
 }));
 
 const RowHeaderCell = styled(TableCell)(({ theme }) => ({
@@ -81,13 +130,19 @@ const RowHeaderCell = styled(TableCell)(({ theme }) => ({
   position: 'sticky',
   left: 0,
   zIndex: 1,
+  minWidth: '120px !important', // Increased from 100px to 120px
+  maxWidth: '120px !important',
+  borderRight: `2px solid ${theme.palette.divider}`,
   textAlign: 'left',
   padding: '8px 12px',
-  minWidth: '120px',
   '& > div': {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px'
+    gap: '6px', // Increased gap
+    fontSize: '0.8rem', // Slightly larger font
+    fontWeight: 'bold',
+    whiteSpace: 'nowrap', // Prevent text wrapping
+    overflow: 'visible', // Allow full text display
   }
 }));
 
@@ -140,12 +195,12 @@ const WindCell = styled(TableCell)<{ windspeed?: number }>(({ theme, windspeed }
 const ForecastTable: React.FC<ForecastTableProps> = ({ 
   forecasts, 
   spotName, 
-  maxColumns = 24 
+  maxColumns = forecasts.length // Show all forecasts for complete data access
 }) => {
   const theme = useTheme();
   
-  // Limit the number of columns to display initially
-  const displayForecasts = forecasts.slice(0, maxColumns);
+  // Show all forecasts by default, with enhanced scrolling for navigation
+  const displayForecasts = maxColumns < forecasts.length ? forecasts.slice(0, maxColumns) : forecasts;
 
   const formatDateTime = (datetime: string): string => {
     // Handle Windguru format like "Su12.10h"
@@ -214,9 +269,33 @@ const ForecastTable: React.FC<ForecastTableProps> = ({
 
   return (
     <Box>
-      <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
-        Forecast Data ({forecasts.length} periods available)
-      </Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+        <Typography variant="subtitle2" sx={{ color: 'text.secondary' }}>
+          Forecast Data ({forecasts.length} periods available)
+        </Typography>
+        {forecasts.length > 6 && (
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            padding: '4px 8px',
+            backgroundColor: theme.palette.primary.main,
+            color: theme.palette.primary.contrastText,
+            borderRadius: 1,
+            fontSize: '0.75rem',
+            fontWeight: 'bold'
+          }}>
+            <span>←</span>
+            <Typography variant="caption" sx={{ 
+              color: 'inherit',
+              fontWeight: 'bold'
+            }}>
+              Scroll for more data
+            </Typography>
+            <span>→</span>
+          </Box>
+        )}
+      </Box>
       
       <StyledTableContainer>
         <StyledTable size="small">
@@ -228,7 +307,12 @@ const ForecastTable: React.FC<ForecastTableProps> = ({
                   backgroundColor: theme.palette.primary.main,
                   color: theme.palette.primary.contrastText,
                   fontWeight: 'bold',
-                  fontSize: '0.7rem'
+                  fontSize: '0.75rem',
+                  height: '48px',
+                  padding: '8px 4px',
+                  lineHeight: '1.2',
+                  minWidth: '100px', // Increased from 90px for better time visibility
+                  maxWidth: '100px',
                 }}>
                   {formatDateTime(forecast.datetime)}
                 </TableCell>
