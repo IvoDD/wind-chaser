@@ -111,9 +111,19 @@ wind-chaser/
    npm start
    ```
 
-4. **Setup Database**
-   - Start MongoDB locally or use MongoDB Atlas
-   - Update connection string in backend/.env
+4. **Setup Database (local)**
+   ```bash
+   # Create the local data directory (gitignored — each dev keeps their own)
+   mkdir -p data/db
+
+   # Start MongoDB in the background
+   mongod --dbpath ./data/db --fork --logpath ./data/mongodb.log
+   ```
+   MongoDB must be running before starting the backend. To stop it:
+   ```bash
+   mongod --dbpath ./data/db --shutdown
+   ```
+   Alternatively, use MongoDB Atlas and point `MONGODB_URI` in `backend/.env` at your cluster.
 
 ### Environment Variables
 

@@ -27,6 +27,22 @@ npm test             # Run tests (interactive mode)
 npm test -- --watchAll=false  # Run tests once
 ```
 
+### MongoDB (local)
+```bash
+# First-time setup — create the data directory (gitignored)
+mkdir -p data/db
+
+# Start MongoDB in the background
+mongod --dbpath ./data/db --fork --logpath ./data/mongodb.log
+
+# Stop MongoDB
+mongod --dbpath ./data/db --shutdown
+# or: kill $(pgrep mongod)
+```
+
+The `data/` directory is gitignored; each developer keeps their own local database.
+MongoDB must be running before starting the backend.
+
 ### Full Stack Development
 ```bash
 ./dev.sh start       # Start MongoDB, backend, and frontend
