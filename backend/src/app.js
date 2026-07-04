@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 require('dotenv').config();
 
 const connectDB = require('./utils/database');
@@ -81,13 +82,21 @@ app.use('/api/auth', authRoutes);
 app.use('/api/spots', spotsRoutes);
 app.use('/api/forecasts', forecastsRoutes);
 
-// 404 handler
-app.use('*', (req, res) => {
+// 404 for unknown API routes
+app.use('/api/*', (req, res) => {
   res.status(404).json({
     error: 'Route not found',
     message: 'The requested endpoint does not exist'
   });
 });
+
+// Serve React app in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../public')));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public', 'index.html'));
+  });
+}
 
 // Error handling middleware
 app.use((err, req, res, next) => {
