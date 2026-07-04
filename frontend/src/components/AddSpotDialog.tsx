@@ -52,7 +52,7 @@ const AddSpotDialog: React.FC<AddSpotDialogProps> = ({ open, onClose }) => {
   const [formData, setFormData] = useState<CreateSpotData>({
     name: '',
     location: '',
-    windguruUrl: '',
+    url: '',
     description: '',
     notificationCriteria: {
       minWindSpeed: 10,
@@ -112,8 +112,8 @@ const AddSpotDialog: React.FC<AddSpotDialogProps> = ({ open, onClose }) => {
   };
 
   const testUrl = async () => {
-    if (!formData.windguruUrl) {
-      setUrlTestResult({ success: false, message: 'Please enter a Windguru URL first' });
+    if (!formData.url) {
+      setUrlTestResult({ success: false, message: 'Please enter a forecast URL first' });
       return;
     }
 
@@ -121,7 +121,7 @@ const AddSpotDialog: React.FC<AddSpotDialogProps> = ({ open, onClose }) => {
     setUrlTestResult(null);
 
     try {
-      const isAccessible = await testWindguruUrl(formData.windguruUrl);
+      const isAccessible = await testWindguruUrl(formData.url);
       setUrlTestResult({
         success: isAccessible,
         message: isAccessible ? 'URL is accessible and valid!' : 'URL is not accessible or invalid',
@@ -145,7 +145,7 @@ const AddSpotDialog: React.FC<AddSpotDialogProps> = ({ open, onClose }) => {
       setFormData({
         name: '',
         location: '',
-        windguruUrl: '',
+        url: '',
         description: '',
         notificationCriteria: {
           minWindSpeed: 10,
@@ -208,18 +208,18 @@ const AddSpotDialog: React.FC<AddSpotDialogProps> = ({ open, onClose }) => {
             <Box sx={{ display: 'flex', gap: 1 }}>
               <TextField
                 fullWidth
-                label="Windguru URL"
-                value={formData.windguruUrl}
-                onChange={handleInputChange('windguruUrl')}
+                label="Forecast URL"
+                value={formData.url}
+                onChange={handleInputChange('url')}
                 required
-                placeholder="https://www.windguru.cz/12345"
+                placeholder="https://www.windguru.cz/12345 or https://www.windyweek.com/spots/..."
                 error={urlTestResult?.success === false}
-                helperText={urlTestResult?.message || 'Enter the Windguru forecast URL for this spot'}
+                helperText={urlTestResult?.message || 'Supports Windguru and WindyWeek URLs'}
               />
               <Button
                 variant="outlined"
                 onClick={testUrl}
-                disabled={urlTesting || !formData.windguruUrl}
+                disabled={urlTesting || !formData.url}
                 startIcon={urlTesting ? <CircularProgress size={16} /> : <TestIcon />}
                 sx={{ minWidth: 120 }}
               >
@@ -346,7 +346,7 @@ const AddSpotDialog: React.FC<AddSpotDialogProps> = ({ open, onClose }) => {
         <Button
           variant="contained"
           onClick={handleSubmit}
-          disabled={loading || !formData.name || !formData.windguruUrl}
+          disabled={loading || !formData.name || !formData.url}
           startIcon={loading ? <CircularProgress size={16} /> : undefined}
         >
           {loading ? 'Creating...' : 'Create Spot'}

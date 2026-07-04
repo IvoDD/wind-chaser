@@ -86,7 +86,7 @@ const SpotsManagement: React.FC = () => {
     }
   };
 
-  const openWindguruUrl = (url: string) => {
+  const openForecastUrl = (url: string) => {
     window.open(url, '_blank');
   };
 
@@ -243,9 +243,9 @@ const SpotsManagement: React.FC = () => {
 
                 <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
                   <Box>
-                    <Tooltip title="Open Windguru">
+                    <Tooltip title="Open forecast">
                       <IconButton
-                        onClick={() => openWindguruUrl(spot.windguruUrl)}
+                        onClick={() => openForecastUrl(spot.url)}
                         size="small"
                         color="primary"
                       >

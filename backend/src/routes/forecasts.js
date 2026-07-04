@@ -5,7 +5,8 @@ const {
   getDashboardForecasts,
   refreshSpotForecast,
   testForecastUrl,
-  clearForecastCache
+  clearForecastCache,
+  getSupportedSources
 } = require('../controllers/forecastsController');
 
 const router = express.Router();
@@ -27,5 +28,8 @@ router.post('/test', testForecastUrl);
 
 // DELETE /api/forecasts/cache - Clear forecast cache
 router.delete('/cache', clearForecastCache);
+
+// GET /api/forecasts/sources - Get supported forecast sources
+router.get('/sources', getSupportedSources);
 
 module.exports = router;

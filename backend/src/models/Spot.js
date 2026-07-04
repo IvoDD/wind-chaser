@@ -1,5 +1,40 @@
 const mongoose = require('mongoose');
 
+/**
+ * Detect forecast source from URL
+ * @param {string} url - Forecast URL
+ * @returns {string|null} 'windguru', 'windyweek', or null
+ */
+function detectForecastSource(url) {
+  if (!url) return null;
+  const normalizedUrl = url.toLowerCase();
+  if (normalizedUrl.includes('windguru.cz')) return 'windguru';
+  if (normalizedUrl.includes('windyweek.com')) return 'windyweek';
+  return null;
+}
+
+/**
+ * Validate forecast URL format based on source
+ * @param {string} url - Forecast URL
+ * @returns {boolean} True if valid
+ */
+function validateForecastUrl(url) {
+  const source = detectForecastSource(url);
+  if (!source) return false;
+
+  if (source === 'windguru') {
+    const windguruRegex = /^https?:\/\/(www\.)?windguru\.cz\/\d+\/?$/;
+    return windguruRegex.test(url);
+  }
+
+  if (source === 'windyweek') {
+    const windyweekRegex = /^https?:\/\/(www\.)?windyweek\.com\/spots\/[a-z0-9-]+\/?$/i;
+    return windyweekRegex.test(url);
+  }
+
+  return false;
+}
+
 const spotSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -13,18 +48,27 @@ const spotSchema = new mongoose.Schema({
     trim: true,
     maxlength: [100, 'Spot name cannot exceed 100 characters']
   },
-  windguruUrl: {
+  // URL field - supports Windguru and WindyWeek
+  url: {
     type: String,
-    required: [true, 'Windguru URL is required'],
+    required: [true, 'Forecast URL is required'],
     trim: true,
     validate: {
-      validator: function(url) {
-        // Validate Windguru URL format
-        const windguruRegex = /^https?:\/\/(www\.)?windguru\.cz\/\d+\/?$/;
-        return windguruRegex.test(url);
-      },
-      message: 'Please provide a valid Windguru URL (e.g., https://www.windguru.cz/81565)'
+      validator: validateForecastUrl,
+      message: 'Please provide a valid forecast URL (Windguru: https://www.windguru.cz/12345 or WindyWeek: https://www.windyweek.com/spots/country-region-spot)'
     }
+  },
+  // Source type - automatically determined from URL
+  source: {
+    type: String,
+    enum: ['windguru', 'windyweek']
+  },
+  // Location
+  location: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Location cannot exceed 200 characters'],
+    default: ''
   },
   description: {
     type: String,
@@ -103,10 +147,19 @@ const spotSchema = new mongoose.Schema({
 spotSchema.index({ userId: 1, isActive: 1 });
 spotSchema.index({ userId: 1, createdAt: -1 });
 
-// Virtual for Windguru spot ID extraction
-spotSchema.virtual('windguruSpotId').get(function() {
-  const match = this.windguruUrl.match(/windguru\.cz\/(\d+)/);
-  return match ? match[1] : null;
+// Virtual for spot ID (works for any source)
+spotSchema.virtual('spotId').get(function() {
+  if (!this.url) return null;
+
+  // Windguru: extract numeric ID
+  const windguruMatch = this.url.match(/windguru\.cz\/(\d+)/);
+  if (windguruMatch) return windguruMatch[1];
+
+  // WindyWeek: extract slug
+  const windyweekMatch = this.url.match(/windyweek\.com\/spots\/([a-z0-9-]+)/i);
+  if (windyweekMatch) return windyweekMatch[1];
+
+  return null;
 });
 
 // Instance method to check if notification should be sent
@@ -170,17 +223,23 @@ spotSchema.statics.findSpotsToCheck = function() {
   }).populate('userId', 'email firstName lastName');
 };
 
-// Pre-save middleware to validate time range
+// Pre-save middleware to set source from URL
 spotSchema.pre('save', function(next) {
+  // Set source based on URL
+  if (this.url) {
+    this.source = detectForecastSource(this.url);
+  }
+
+  // Validate time range
   const startTime = this.notificationCriteria.timeRange.start;
   const endTime = this.notificationCriteria.timeRange.end;
-  
+
   if (startTime >= endTime) {
     const error = new Error('End time must be after start time');
     error.name = 'ValidationError';
     return next(error);
   }
-  
+
   next();
 });
 

@@ -44,7 +44,8 @@ interface SpotForecast {
   id: string;
   name: string;
   location: string;
-  windguruUrl: string;
+  url: string;
+  source: 'windguru' | 'windyweek';
   notificationCriteria: any;
   isActive: boolean;
   lastChecked: string;
@@ -284,6 +285,12 @@ const ForecastDashboard: React.FC<{ onNavigateToSpots?: () => void }> = ({
                         color={spot.isActive ? 'success' : 'default'}
                         size="small"
                       />
+                      <Chip
+                        label={spot.source === 'windyweek' ? 'WindyWeek' : 'Windguru'}
+                        color={spot.source === 'windyweek' ? 'secondary' : 'primary'}
+                        size="small"
+                        variant="outlined"
+                      />
                       {spot.lastChecked && (
                         <Typography variant="caption" color="text.secondary">
                           Updated {formatLastChecked(spot.lastChecked)}
@@ -310,10 +317,10 @@ const ForecastDashboard: React.FC<{ onNavigateToSpots?: () => void }> = ({
                         )}
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="Open Windguru">
+                    <Tooltip title={`Open ${spot.source === 'windyweek' ? 'WindyWeek' : 'Windguru'}`}>
                       <IconButton
                         component={Link}
-                        href={spot.windguruUrl}
+                        href={spot.url}
                         target="_blank"
                         rel="noopener noreferrer"
                         size="small"
@@ -446,7 +453,7 @@ const ForecastDashboard: React.FC<{ onNavigateToSpots?: () => void }> = ({
             userId: '', // This will be handled by the backend
             name: spotToEdit.name,
             location: spotToEdit.location,
-            windguruUrl: spotToEdit.windguruUrl,
+            url: spotToEdit.url,
             description: '',
             notificationCriteria: spotToEdit.notificationCriteria,
             isActive: spotToEdit.isActive,

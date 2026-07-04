@@ -18,14 +18,13 @@ import {
 } from '@mui/icons-material';
 
 interface WindForecast {
-  datetime: string;
+  timestamp: string; // ISO timestamp
   windSpeed: number | null;
   windGusts: number | null;
   windDirection: string | null;
   temperature: number | null;
-  cloudCover: any;
+  cloudCover: number | null;
   precipitation: number | null;
-  timestamp: string;
 }
 
 interface ForecastTableProps {
@@ -202,21 +201,20 @@ const ForecastTable: React.FC<ForecastTableProps> = ({
   // Show all forecasts by default, with enhanced scrolling for navigation
   const displayForecasts = maxColumns < forecasts.length ? forecasts.slice(0, maxColumns) : forecasts;
 
-  const formatDateTime = (datetime: string): string => {
-    // Handle Windguru format like "Su12.10h"
-    if (datetime.includes('.') && datetime.includes('h')) {
-      return datetime;
-    }
-    
-    // Fallback for other formats
+  const formatDateTime = (timestamp: string): string => {
+    // Parse ISO timestamp and format as "Day DD.HHh" (e.g., "Sat10.14h")
     try {
-      const date = new Date(datetime);
-      const day = date.toLocaleDateString('en', { weekday: 'short' });
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) {
+        return timestamp;
+      }
+
+      const dayAbbr = date.toLocaleDateString('en', { weekday: 'short' });
       const dayNum = date.getDate();
       const hour = date.getHours();
-      return `${day}${dayNum}.${hour}h`;
+      return `${dayAbbr}${dayNum}.${hour}h`;
     } catch {
-      return datetime;
+      return timestamp;
     }
   };
 
@@ -303,7 +301,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({
             <TableRow>
               <TimeCell>Time</TimeCell>
               {displayForecasts.map((forecast, index) => (
-                <TableCell key={index} sx={{ 
+                <TableCell key={index} sx={{
                   backgroundColor: theme.palette.primary.main,
                   color: theme.palette.primary.contrastText,
                   fontWeight: 'bold',
@@ -314,7 +312,7 @@ const ForecastTable: React.FC<ForecastTableProps> = ({
                   minWidth: '100px', // Increased from 90px for better time visibility
                   maxWidth: '100px',
                 }}>
-                  {formatDateTime(forecast.datetime)}
+                  {formatDateTime(forecast.timestamp)}
                 </TableCell>
               ))}
             </TableRow>

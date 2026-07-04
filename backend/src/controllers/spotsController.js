@@ -63,40 +63,41 @@ const getSpotById = async (req, res) => {
 const createSpot = async (req, res) => {
   try {
     const userId = req.user._id;
-    const { name, windguruUrl, description, notificationCriteria } = req.body;
-    
+    const { name, url, location, description, notificationCriteria } = req.body;
+
     // Validate required fields
-    if (!name || !windguruUrl) {
+    if (!name || !url) {
       return res.status(400).json({
         error: 'Validation error',
-        message: 'Name and Windguru URL are required'
+        message: 'Name and forecast URL are required'
       });
     }
-    
+
     // Check if user already has a spot with this URL
-    const existingSpot = await Spot.findOne({ userId, windguruUrl });
+    const existingSpot = await Spot.findOne({ userId, url });
     if (existingSpot) {
       return res.status(409).json({
         error: 'Spot already exists',
-        message: 'You already have a spot with this Windguru URL'
+        message: 'You already have a spot with this forecast URL'
       });
     }
-    
-    // Validate Windguru URL by trying to access it
+
+    // Validate URL by trying to access it
     try {
-      await axios.head(windguruUrl, { timeout: 5000 });
+      await axios.head(url, { timeout: 5000 });
     } catch (urlError) {
       return res.status(400).json({
         error: 'Invalid URL',
-        message: 'The provided Windguru URL is not accessible'
+        message: 'The provided forecast URL is not accessible'
       });
     }
-    
+
     // Create new spot
     const spotData = {
       userId,
       name,
-      windguruUrl,
+      url,
+      location: location || '',
       description: description || '',
       notificationCriteria: {
         minWindSpeed: notificationCriteria?.minWindSpeed || 10,
@@ -109,18 +110,18 @@ const createSpot = async (req, res) => {
         }
       }
     };
-    
+
     const spot = new Spot(spotData);
     await spot.save();
-    
+
     res.status(201).json({
       message: 'Spot created successfully',
       spot: spot
     });
-    
+
   } catch (error) {
     console.error('Create spot error:', error);
-    
+
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map(err => err.message);
       return res.status(400).json({
@@ -128,7 +129,7 @@ const createSpot = async (req, res) => {
         message: errors.join(', ')
       });
     }
-    
+
     res.status(500).json({
       error: 'Failed to create spot',
       message: 'Internal server error while creating spot'
@@ -142,73 +143,73 @@ const updateSpot = async (req, res) => {
     const userId = req.user._id;
     const spotId = req.params.id;
     const updates = req.body;
-    
+
     // Find the spot
     const spot = await Spot.findOne({ _id: spotId, userId });
-    
+
     if (!spot) {
       return res.status(404).json({
         error: 'Spot not found',
         message: 'Spot not found or you do not have permission to update it'
       });
     }
-    
-    // Validate Windguru URL if it's being updated
-    if (updates.windguruUrl && updates.windguruUrl !== spot.windguruUrl) {
+
+    // Validate URL if it's being updated
+    if (updates.url && updates.url !== spot.url) {
       // Check if another spot with this URL exists
-      const existingSpot = await Spot.findOne({ 
-        userId, 
-        windguruUrl: updates.windguruUrl,
+      const existingSpot = await Spot.findOne({
+        userId,
+        url: updates.url,
         _id: { $ne: spotId }
       });
-      
+
       if (existingSpot) {
         return res.status(409).json({
           error: 'URL already in use',
-          message: 'You already have another spot with this Windguru URL'
+          message: 'You already have another spot with this forecast URL'
         });
       }
-      
+
       // Validate URL accessibility
       try {
-        await axios.head(updates.windguruUrl, { timeout: 5000 });
+        await axios.head(updates.url, { timeout: 5000 });
       } catch (urlError) {
         return res.status(400).json({
           error: 'Invalid URL',
-          message: 'The provided Windguru URL is not accessible'
+          message: 'The provided forecast URL is not accessible'
         });
       }
     }
-    
+
     // Update allowed fields
-    const allowedUpdates = ['name', 'windguruUrl', 'description', 'notificationCriteria', 'isActive'];
+    const allowedUpdates = ['name', 'url', 'location', 'description', 'notificationCriteria', 'isActive'];
     const actualUpdates = {};
-    
+
     allowedUpdates.forEach(field => {
       if (updates[field] !== undefined) {
         actualUpdates[field] = updates[field];
       }
     });
-    
+
     // Apply updates
     Object.assign(spot, actualUpdates);
     await spot.save();
-    
+
     res.status(200).json({
       message: 'Spot updated successfully',
       spot: spot
     });
-    
+
   } catch (error) {
     console.error('Update spot error:', error);
-    
+
     if (error.name === 'CastError') {
       return res.status(400).json({
         error: 'Invalid spot ID',
         message: 'The provided spot ID is not valid'
       });
     }
-    
+
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map(err => err.message);
       return res.status(400).json({
@@ -216,7 +217,7 @@ const updateSpot = async (req, res) => {
         message: errors.join(', ')
       });
     }
-    
+
     res.status(500).json({
       error: 'Failed to update spot',
       message: 'Internal server error while updating spot'
@@ -304,47 +305,58 @@ const toggleSpotActive = async (req, res) => {
   }
 };
 
-// Test Windguru URL accessibility
-const testWindguruUrl = async (req, res) => {
+// Test forecast URL accessibility (supports Windguru and WindyWeek)
+const testForecastUrl = async (req, res) => {
   try {
     const { url } = req.body;
-    
+
     if (!url) {
       return res.status(400).json({
         error: 'URL required',
-        message: 'Windguru URL is required'
+        message: 'Forecast URL is required'
       });
     }
-    
-    // Validate URL format
+
+    // Validate URL format for supported sources
     const windguruRegex = /^https?:\/\/(www\.)?windguru\.cz\/\d+\/?$/;
-    if (!windguruRegex.test(url)) {
+    const windyweekRegex = /^https?:\/\/(www\.)?windyweek\.com\/spots\/[a-z0-9-]+\/?$/i;
+
+    let source = null;
+    if (windguruRegex.test(url)) {
+      source = 'windguru';
+    } else if (windyweekRegex.test(url)) {
+      source = 'windyweek';
+    }
+
+    if (!source) {
       return res.status(400).json({
         error: 'Invalid URL format',
-        message: 'Please provide a valid Windguru URL (e.g., https://www.windguru.cz/81565)'
+        message: 'Please provide a valid Windguru or WindyWeek URL'
       });
     }
-    
+
     // Test URL accessibility
     try {
       const response = await axios.head(url, { timeout: 5000 });
-      
+
       res.status(200).json({
         message: 'URL is accessible',
         url: url,
+        source: source,
         accessible: true,
         statusCode: response.status
       });
-      
+
     } catch (urlError) {
       res.status(400).json({
         error: 'URL not accessible',
-        message: 'The provided Windguru URL could not be accessed',
+        message: 'The provided forecast URL could not be accessed',
         url: url,
+        source: source,
         accessible: false
       });
     }
-    
+
   } catch (error) {
     console.error('Test URL error:', error);
     res.status(500).json({
@@ -361,5 +373,5 @@ module.exports = {
   updateSpot,
   deleteSpot,
   toggleSpotActive,
-  testWindguruUrl
+  testForecastUrl
 };

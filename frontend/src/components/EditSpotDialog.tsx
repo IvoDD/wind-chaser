@@ -60,7 +60,7 @@ const EditSpotDialog: React.FC<EditSpotDialogProps> = ({ open, onClose, spot }) 
       setFormData({
         name: spot.name,
         location: spot.location || '',
-        windguruUrl: spot.windguruUrl,
+        url: spot.url,
         description: spot.description || '',
         notificationCriteria: {
           minWindSpeed: spot.notificationCriteria.minWindSpeed || 10,
@@ -115,8 +115,8 @@ const EditSpotDialog: React.FC<EditSpotDialogProps> = ({ open, onClose, spot }) 
   };
 
   const testUrl = async () => {
-    if (!formData.windguruUrl) {
-      setUrlTestResult({ success: false, message: 'Please enter a Windguru URL first' });
+    if (!formData.url) {
+      setUrlTestResult({ success: false, message: 'Please enter a forecast URL first' });
       return;
     }
 
@@ -124,7 +124,7 @@ const EditSpotDialog: React.FC<EditSpotDialogProps> = ({ open, onClose, spot }) 
     setUrlTestResult(null);
 
     try {
-      const isAccessible = await testWindguruUrl(formData.windguruUrl);
+      const isAccessible = await testWindguruUrl(formData.url);
       setUrlTestResult({
         success: isAccessible,
         message: isAccessible ? 'URL is accessible and valid!' : 'URL is not accessible or invalid',
@@ -196,17 +196,18 @@ const EditSpotDialog: React.FC<EditSpotDialogProps> = ({ open, onClose, spot }) 
             <Box sx={{ display: 'flex', gap: 1 }}>
               <TextField
                 fullWidth
-                label="Windguru URL"
-                value={formData.windguruUrl || ''}
-                onChange={handleInputChange('windguruUrl')}
+                label="Forecast URL"
+                value={formData.url || ''}
+                onChange={handleInputChange('url')}
                 required
                 error={urlTestResult?.success === false}
-                helperText={urlTestResult?.message}
+                helperText={urlTestResult?.message || 'Supports Windguru and WindyWeek URLs'}
+                placeholder="https://www.windguru.cz/12345 or https://www.windyweek.com/spots/..."
               />
               <Button
                 variant="outlined"
                 onClick={testUrl}
-                disabled={urlTesting || !formData.windguruUrl}
+                disabled={urlTesting || !formData.url}
                 startIcon={urlTesting ? <CircularProgress size={16} /> : <TestIcon />}
                 sx={{ minWidth: 120 }}
               >
@@ -332,7 +333,7 @@ const EditSpotDialog: React.FC<EditSpotDialogProps> = ({ open, onClose, spot }) 
         <Button
           variant="contained"
           onClick={handleSubmit}
-          disabled={loading || !formData.name || !formData.windguruUrl}
+          disabled={loading || !formData.name || !formData.url}
           startIcon={loading ? <CircularProgress size={16} /> : undefined}
         >
           {loading ? 'Updating...' : 'Update Spot'}

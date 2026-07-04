@@ -7,7 +7,7 @@ const {
   updateSpot,
   deleteSpot,
   toggleSpotActive,
-  testWindguruUrl
+  testForecastUrl
 } = require('../controllers/spotsController');
 
 const router = express.Router();
@@ -33,7 +33,7 @@ router.delete('/:id', deleteSpot);
 // PATCH /api/spots/:id/toggle - Toggle spot active status
 router.patch('/:id/toggle', toggleSpotActive);
 
-// POST /api/spots/test-url - Test Windguru URL accessibility
-router.post('/test-url', testWindguruUrl);
+// POST /api/spots/test-url - Test forecast URL accessibility (Windguru/WindyWeek)
+router.post('/test-url', testForecastUrl);
 
 module.exports = router;

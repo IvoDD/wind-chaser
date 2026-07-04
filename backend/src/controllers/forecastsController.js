@@ -1,9 +1,6 @@
-const WindguruScraper = require('../services/WindguruScraper');
+const scraperFactory = require('../services/ForecastScraperFactory');
 const Spot = require('../models/Spot');
 const User = require('../models/User');
-
-// Initialize scraper instance
-const scraper = new WindguruScraper();
 
 /**
  * Get live forecast for a specific spot
@@ -15,8 +12,8 @@ const getLiveForecast = async (req, res) => {
     const userId = req.user._id || req.user.id;
 
     // Find the spot and verify ownership
-    const spot = await Spot.findOne({ 
-      _id: spotId, 
+    const spot = await Spot.findOne({
+      _id: spotId,
       userId: userId
     });
 
@@ -34,8 +31,10 @@ const getLiveForecast = async (req, res) => {
       });
     }
 
-    // Scrape forecast data
-    const forecastData = await scraper.scrapeSpot(spot.windguruUrl);
+    const spotUrl = spot.url;
+
+    // Scrape forecast data using the factory
+    const forecastData = await scraperFactory.scrapeSpot(spotUrl);
 
     // Update spot's last checked time
     await Spot.findByIdAndUpdate(spotId, {
@@ -48,15 +47,16 @@ const getLiveForecast = async (req, res) => {
         id: spot._id,
         name: spot.name,
         location: spot.location,
-        windguruUrl: spot.windguruUrl
+        url: spotUrl,
+        source: forecastData.source
       },
       forecast: forecastData
     });
 
   } catch (error) {
     console.error('Error fetching live forecast:', error);
-    
-    if (error.message.includes('Invalid Windguru URL')) {
+
+    if (error.message.includes('Unsupported') || error.message.includes('Invalid')) {
       return res.status(400).json({
         error: 'Invalid URL',
         message: error.message
@@ -83,20 +83,16 @@ const getLiveForecast = async (req, res) => {
  */
 const getDashboardForecasts = async (req, res) => {
   try {
-    const userId = req.user._id || req.user.id; // Use _id (MongoDB ObjectId) or id
+    const userId = req.user._id || req.user.id;
     console.log('Dashboard request for userId:', userId);
-    console.log('req.user:', req.user);
 
     // Get all active user spots
-    const spots = await Spot.find({ 
+    const spots = await Spot.find({
       userId: userId,
       isActive: true
     }).sort({ createdAt: -1 });
 
     console.log('Found spots:', spots.length);
-    if (spots.length > 0) {
-      console.log('First spot:', { id: spots[0]._id, name: spots[0].name, url: spots[0].windguruUrl });
-    }
 
     if (spots.length === 0) {
       return res.json({
@@ -109,9 +105,10 @@ const getDashboardForecasts = async (req, res) => {
     // Fetch forecasts for all spots (with error handling per spot)
     const spotsWithForecasts = await Promise.allSettled(
       spots.map(async (spot) => {
+        const spotUrl = spot.url;
         try {
-          const forecastData = await scraper.scrapeSpot(spot.windguruUrl);
-          
+          const forecastData = await scraperFactory.scrapeSpot(spotUrl);
+
           // Update last checked time
           await Spot.findByIdAndUpdate(spot._id, {
             lastChecked: new Date()
@@ -121,7 +118,8 @@ const getDashboardForecasts = async (req, res) => {
             id: spot._id,
             name: spot.name,
             location: spot.location,
-            windguruUrl: spot.windguruUrl,
+            url: spotUrl,
+            source: forecastData.source,
             notificationCriteria: spot.notificationCriteria,
             isActive: spot.isActive,
             lastChecked: new Date(),
@@ -134,7 +132,8 @@ const getDashboardForecasts = async (req, res) => {
             id: spot._id,
             name: spot.name,
             location: spot.location,
-            windguruUrl: spot.windguruUrl,
+            url: spotUrl,
+            source: scraperFactory.detectSource(spotUrl),
             notificationCriteria: spot.notificationCriteria,
             isActive: spot.isActive,
             lastChecked: spot.lastChecked,
@@ -181,8 +180,8 @@ const refreshSpotForecast = async (req, res) => {
     const userId = req.user._id || req.user.id;
 
     // Find the spot and verify ownership
-    const spot = await Spot.findOne({ 
-      _id: spotId, 
+    const spot = await Spot.findOne({
+      _id: spotId,
       userId: userId
     });
 
@@ -193,11 +192,13 @@ const refreshSpotForecast = async (req, res) => {
       });
     }
 
+    const spotUrl = spot.url;
+
     // Clear cache for this spot to force fresh data
-    scraper.clearCache(scraper.extractSpotId(spot.windguruUrl));
+    scraperFactory.clearCache(spotUrl);
 
     // Scrape fresh forecast data
-    const forecastData = await scraper.scrapeSpot(spot.windguruUrl);
+    const forecastData = await scraperFactory.scrapeSpot(spotUrl);
 
     // Update spot's last checked time
     await Spot.findByIdAndUpdate(spotId, {
@@ -209,7 +210,8 @@ const refreshSpotForecast = async (req, res) => {
       spot: {
         id: spot._id,
         name: spot.name,
-        location: spot.location
+        location: spot.location,
+        source: forecastData.source
       },
       forecast: forecastData
     });
@@ -224,7 +226,7 @@ const refreshSpotForecast = async (req, res) => {
 };
 
 /**
- * Test forecast scraping for a Windguru URL
+ * Test forecast scraping for a URL (supports Windguru and WindyWeek)
  * POST /api/forecasts/test
  */
 const testForecastUrl = async (req, res) => {
@@ -234,24 +236,45 @@ const testForecastUrl = async (req, res) => {
     if (!url) {
       return res.status(400).json({
         error: 'URL required',
-        message: 'Windguru URL is required'
+        message: 'Forecast URL is required (Windguru or WindyWeek)'
+      });
+    }
+
+    // Validate URL format first
+    const validation = scraperFactory.validateUrl(url);
+    if (!validation.valid) {
+      return res.status(400).json({
+        error: 'Invalid URL format',
+        message: validation.error,
+        url,
+        accessible: false
       });
     }
 
     // Test the URL
-    const forecastData = await scraper.scrapeSpot(url);
+    const testResult = await scraperFactory.testUrl(url);
 
-    res.json({
-      message: 'URL test successful',
-      url,
-      accessible: true,
-      forecast: {
-        spotName: forecastData.spotName,
-        forecastCount: forecastData.forecasts.length,
-        sampleForecast: forecastData.forecasts[0] || null,
-        scrapedAt: forecastData.scrapedAt
-      }
-    });
+    if (testResult.success) {
+      res.json({
+        message: 'URL test successful',
+        url,
+        accessible: true,
+        source: testResult.source,
+        forecast: {
+          spotName: testResult.spotName,
+          forecastCount: testResult.forecastCount,
+          sampleForecast: testResult.sampleForecast
+        }
+      });
+    } else {
+      res.status(400).json({
+        error: 'URL test failed',
+        message: testResult.error,
+        url,
+        source: testResult.source,
+        accessible: false
+      });
+    }
 
   } catch (error) {
     console.error('Error testing forecast URL:', error);
@@ -274,8 +297,8 @@ const clearForecastCache = async (req, res) => {
 
     if (spotId) {
       // Clear cache for specific spot
-      const spot = await Spot.findOne({ 
-        _id: spotId, 
+      const spot = await Spot.findOne({
+        _id: spotId,
         userId: req.user._id || req.user.id
       });
 
@@ -286,16 +309,17 @@ const clearForecastCache = async (req, res) => {
         });
       }
 
-      scraper.clearCache(scraper.extractSpotId(spot.windguruUrl));
-      
+      const spotUrl = spot.url;
+      scraperFactory.clearCache(spotUrl);
+
       res.json({
         message: 'Cache cleared for spot',
         spotId: spotId
       });
     } else {
       // Clear all cache
-      scraper.clearCache();
-      
+      scraperFactory.clearCache();
+
       res.json({
         message: 'All forecast cache cleared'
       });
@@ -310,10 +334,25 @@ const clearForecastCache = async (req, res) => {
   }
 };
 
+/**
+ * Get supported forecast sources
+ * GET /api/forecasts/sources
+ */
+const getSupportedSources = async (req, res) => {
+  res.json({
+    sources: scraperFactory.getSupportedSources(),
+    examples: {
+      windguru: 'https://www.windguru.cz/12345',
+      windyweek: 'https://www.windyweek.com/spots/country-region-spot'
+    }
+  });
+};
+
 module.exports = {
   getLiveForecast,
   getDashboardForecasts,
   refreshSpotForecast,
   testForecastUrl,
-  clearForecastCache
+  clearForecastCache,
+  getSupportedSources
 };

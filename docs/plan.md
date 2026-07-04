@@ -297,6 +297,119 @@ Build a full-stack web application for wind sports enthusiasts to track and rece
 
 **Phase 5 Status**: ✅ **COMPLETELY FINISHED** - Full-featured dashboard with professional Windguru-style forecast tables, wind speed color coding, comprehensive spot management, and enhanced horizontal scrolling experience.
 
+## Phase 5.5: WindyWeek Integration & Multi-Source Support
+
+### 5.5.1 WindyWeek Page Analysis
+- [ ] Explore WindyWeek page structure (https://www.windyweek.com/spots/bulgaria-sofia-cherni-vrah)
+- [ ] Document available data fields:
+  - Wind speed and gusts
+  - Wind direction
+  - Temperature
+  - Humidity (WindyWeek-specific)
+  - Precipitation
+- [ ] Identify forecast period structure (hourly forecasts, ~3 days coverage)
+- [ ] Analyze HTML/DOM structure for scraping approach
+
+### 5.5.2 Common Forecast Data Model
+- [ ] Design unified forecast data structure supporting both sources:
+  ```javascript
+  {
+    source: String,           // 'windguru' | 'windyweek'
+    spotId: String,
+    spotName: String,
+    url: String,
+    scrapedAt: Date,
+
+    metadata: {
+      sourceUnits: {
+        windSpeed: String,    // Original unit: 'knots' | 'm/s'
+        temperature: String   // 'celsius'
+      }
+    },
+
+    forecasts: [{
+      timestamp: Date,        // Proper ISO datetime (parsed from source-specific format)
+      windSpeed: Number,      // Always in knots (normalized)
+      windGusts: Number,      // Always in knots (normalized, optional)
+      windDirection: String,  // degrees (e.g., "249°")
+      temperature: Number,    // celsius
+      cloudCover: Number,     // percentage 0-100 (optional)
+      precipitation: Number,  // mm (optional)
+      humidity: Number,       // percentage 0-100 (optional, WindyWeek)
+      pressure: Number,       // hPa (optional, WindyWeek)
+      windChill: Number       // celsius (optional, WindyWeek)
+    }]
+  }
+  ```
+- [ ] Document field availability by source:
+  - Windguru: windSpeed, windGusts, windDirection, temperature, cloudCover (detailed), precipitation
+  - WindyWeek: windSpeed, windGusts, windDirection, temperature, humidity, precipitation, pressure, windChill
+- [ ] **Datetime parsing**: Implement source-specific timestamp conversion:
+  - Windguru: Parse "Su12.10h" format → full ISO datetime
+  - WindyWeek: Parse day headers ("Sat, 10/1") + hour cells ("10h") → full ISO datetime
+- [ ] **Unit normalization**: Convert all wind speeds to knots internally (WindyWeek m/s × 1.944)
+- [ ] Confirm data model design with user before implementation
+
+### 5.5.2b Update Windguru Scraper for Proper Datetime Parsing
+- [ ] Analyze Windguru datetime format patterns (e.g., "Su12.10h", "Mo13.07h")
+- [ ] Implement datetime parser that converts to proper ISO timestamps
+- [ ] Handle edge cases: year rollover, timezone considerations
+- [ ] Update WindguruScraper to use new timestamp format
+- [ ] Test datetime parsing with various forecast periods
+
+### 5.5.3 WindyWeek Scraper Development
+- [ ] Create WindyWeekScraper service class
+- [ ] Implement scraping logic (Puppeteer/Cheerio as needed)
+- [ ] Extract all available forecast data fields
+- [ ] Handle cookie consent and anti-bot measures
+- [ ] Add caching mechanism (similar to Windguru scraper)
+- [ ] Implement error handling and retry logic
+- [ ] Test scraper with sample URLs and verify data accuracy
+
+### 5.5.4 URL Detection & Routing
+- [ ] Create URL detection utility to identify forecast source:
+  ```javascript
+  function detectForecastSource(url) {
+    if (url.includes('windguru.cz')) return 'windguru';
+    if (url.includes('windyweek.com')) return 'windyweek';
+    return null;
+  }
+  ```
+- [ ] Update Spot model to support multiple URL types
+- [ ] Route scraping requests to appropriate scraper based on URL
+
+### 5.5.5 Dashboard Integration
+- [ ] Update forecast API to use unified data structure
+- [ ] Modify ForecastDashboard component to handle variable fields:
+  - Show/hide columns based on available data
+  - Display humidity for WindyWeek sources
+  - Handle different forecast period counts gracefully
+- [ ] Add source indicator to spot cards (Windguru/WindyWeek icon/badge)
+- [ ] Update URL validation to accept both Windguru and WindyWeek URLs
+- [ ] Test dashboard with spots from both sources
+
+### 5.5.6 User Unit Preferences
+- [ ] Add user preferences model/storage:
+  ```javascript
+  {
+    windSpeedUnit: 'knots' | 'm/s' | 'km/h' | 'mph',
+    temperatureUnit: 'celsius' | 'fahrenheit'
+  }
+  ```
+- [ ] Create unit conversion utility functions:
+  - knots ↔ m/s ↔ km/h ↔ mph
+  - celsius ↔ fahrenheit
+- [ ] Add settings UI component (dropdown/toggle in navbar or settings page)
+- [ ] Store preference in localStorage (or user profile if logged in)
+- [ ] Update dashboard to display values in user's preferred unit
+- [ ] Show unit labels in table headers (e.g., "Wind (knots)" or "Wind (m/s)")
+
+### 5.5.7 Testing & Verification
+- [ ] Verify WindyWeek scraper extracts accurate data
+- [ ] Test dashboard displays both source types correctly
+- [ ] Confirm missing fields are handled gracefully (no errors, clean UI)
+- [ ] Test mixed spots (some Windguru, some WindyWeek) on dashboard
+
 ## Phase 6: Periodic Scraping & Historical Data (Days 13-15)
 
 ### 6.1 Data Standardization & Backend Improvements

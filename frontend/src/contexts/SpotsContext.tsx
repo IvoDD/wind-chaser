@@ -17,7 +17,8 @@ export interface Spot {
   userId: string;
   name: string;
   location?: string;
-  windguruUrl: string;
+  url: string;
+  source?: 'windguru' | 'windyweek';
   description?: string;
   notificationCriteria: NotificationCriteria;
   isActive: boolean;
@@ -30,7 +31,7 @@ export interface Spot {
 export interface CreateSpotData {
   name: string;
   location?: string;
-  windguruUrl: string;
+  url: string;
   description?: string;
   notificationCriteria: NotificationCriteria;
 }
