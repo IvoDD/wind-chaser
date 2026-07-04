@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
-    "test": "jest"
+    "test": "jest",
+    "test:unit": "jest tests/unit",
+    "test:integration": "jest tests/integration",
+    "test:coverage": "jest --coverage"
   },
   "keywords": [
     "wind",
@@ -33,6 +36,7 @@
   },
   "devDependencies": {
     "jest": "^29.6.2",
+    "mongodb-memory-server": "^11.2.0",
     "nodemon": "^3.0.1",
     "supertest": "^6.3.3"
   }

@@ -98,13 +98,14 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, async () => {
-  // Connect to database
-  await connectDB();
-  
-  console.log(`🚀 Wind Chaser API server running on port ${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`🧪 Test endpoint: http://localhost:${PORT}/api/test`);
-});
+// Only start the server when this file is run directly (not when required by tests)
+if (require.main === module) {
+  app.listen(PORT, async () => {
+    await connectDB();
+    console.log(`🚀 Wind Chaser API server running on port ${PORT}`);
+    console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+    console.log(`🧪 Test endpoint: http://localhost:${PORT}/api/test`);
+  });
+}
 
 module.exports = app;
